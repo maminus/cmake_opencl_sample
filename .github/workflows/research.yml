@@ -4,12 +4,16 @@ jobs:
   bash-example:
     runs-on: ubuntu-latest
     steps:
-        # https://docs.github.com/ja/actions/reference/workflows-and-actions/workflow-commands
-      - name: Check OpenCL environment
+      - name: Install CUDA
+        uses: Jimver/cuda-toolkit@master
+        id: cuda-toolkit
+      # https://docs.github.com/ja/actions/reference/workflows-and-actions/workflow-commands
+      - name: Setup and Check OpenCL environment
         run: |
             echo "::group::clinfo関連インストール"
-            echo "::notice::clinfoのインストール"
+            echo "::notice::apt update"
             sudo apt-get update
+            echo "::notice::clinfoのインストール"
             sudo apt-get install -y --no-install-recommends ocl-icd-libopencl1 clinfo
             echo "::endgroup::"
             echo "::group::OpenCL検査"
