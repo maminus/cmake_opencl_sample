@@ -10,6 +10,10 @@
 #include <CL/opencl.hpp>
 #include "fma_opencl.hpp"
 
+namespace {
+constexpr auto TARGET_DEVICE_TYPE = CL_DEVICE_TYPE_ALL;
+}
+
 namespace MyCl
 {
 int get_platform_num(void)
@@ -25,7 +29,7 @@ int get_device_num(int platform_index)
     std::vector<cl::Device> devices;
 
     cl::Platform::get(&platforms);
-    platforms.at(platform_index).getDevices(CL_DEVICE_TYPE_ALL, &devices);
+    platforms.at(platform_index).getDevices(TARGET_DEVICE_TYPE, &devices);
 
     return devices.size();
 }
@@ -113,7 +117,7 @@ cl::CommandQueue get_queue(int platform_index, int device_index)
 
     auto err = cl::Platform::get(&platforms);
 
-    err = platforms.at(platform_index).getDevices(CL_DEVICE_TYPE_GPU, &devices);
+    err = platforms.at(platform_index).getDevices(TARGET_DEVICE_TYPE, &devices);
     auto device = devices.at(device_index);
 
     cl::Context context(device);
