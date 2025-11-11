@@ -142,7 +142,7 @@ kernel void fma(global const float* A, global const float* B, global const float
 }
 )DCS";
 
-constexpr const char* build_options = "-cl-std=CL2.0";
+constexpr const char* build_options = "-cl-std=CL1.2";
 
 cl::Kernel get_fma_kernel(cl::CommandQueue& queue)
 {
