@@ -4,7 +4,7 @@ jobs:
   ci:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -19,6 +19,13 @@ jobs:
             echo "::group::poclインストール"
             sudo apt-get install -y --no-install-recommends pocl-opencl-icd
             echo "::endgroup::"
+      - name: Install CUDA
+        if: startsWith(matrix.os, 'windows')
+        uses: Jimver/cuda-toolkit@v0.2.29
+        id: cuda-toolkit
+        with:
+          cuda: '12.5.0'
+          method: 'network'  # https://github.com/Jimver/cuda-toolkit/issues/392#issuecomment-3311921753
       - name: Configure CMake
         run: |
             cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
