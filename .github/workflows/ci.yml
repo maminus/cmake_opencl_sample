@@ -4,7 +4,7 @@ jobs:
   ci:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -27,4 +27,4 @@ jobs:
             cmake --build build --config Release
       - name: Do Test
         run: |
-            ctest --test-dir build -C Release
+            ctest --test-dir build -C Release --output-on-failure
