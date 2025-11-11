@@ -1,7 +1,7 @@
 name: research
 on: push
 jobs:
-  setup:
+  ci:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -10,7 +10,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       # https://docs.github.com/ja/actions/reference/workflows-and-actions/workflow-commands
-      - name: Setup OpenCL environment
+      - name: Setup OpenCL environment(Ubuntu Only)
         if: startsWith(matrix.os, 'ubuntu')
         run: |
             echo "::group::apt update"
@@ -19,33 +19,12 @@ jobs:
             echo "::group::poclインストール"
             sudo apt-get install -y --no-install-recommends pocl-opencl-icd
             echo "::endgroup::"
-  config:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    needs: setup
-    steps:
       - name: Configure CMake
         run: |
             cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
-  build:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    needs: config
-    steps:
       - name: Build DLL and Test
         run: |
             cmake --build build --config Release
-  test:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    needs: build
-    steps:
       - name: Do Test
         run: |
             ctest --test-dir build -C Release
