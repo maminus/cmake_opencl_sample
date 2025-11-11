@@ -1,0 +1,24 @@
+name: research
+on: push
+jobs:
+  bash-example:
+    runs-on: ubuntu-latest
+    steps:
+        # https://docs.github.com/ja/actions/reference/workflows-and-actions/workflow-commands
+      - name: Check OpenCL environment
+        run: |
+            echo "::group::clinfo関連インストール"
+            echo "::notice::clinfoのインストール"
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends ocl-icd-libopencl1 clinfo
+            echo "::endgroup::"
+            echo "::group::OpenCL検査"
+            clinfo
+            echo "::endgroup::"
+            echo "::group::pocl追加インストール"
+            echo "::notice::poclのインストール"
+            sudo apt-get install -y --no-install-recommends pocl-opencl-icd
+            echo "::endgroup::"
+            echo "::group::OpenCL検査"
+            clinfo
+            echo "::endgroup::"
