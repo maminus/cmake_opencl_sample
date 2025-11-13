@@ -10,7 +10,8 @@
 #include <CL/opencl.hpp>
 #include "fma_opencl.hpp"
 
-namespace {
+namespace
+{
 constexpr auto TARGET_DEVICE_TYPE = CL_DEVICE_TYPE_ALL;
 }
 
@@ -59,7 +60,7 @@ using CoarseWriteAllocator = cl::SVMAllocator<float, CoarseWrite>;
 template <class Alloc>
 class SvmArea
 {
-    using T = Alloc::value_type;
+    using T = typename Alloc::value_type;
     using pointer_type = T*;
     class UnmapTraits : public std::allocator_traits<Alloc>
     {
@@ -110,26 +111,19 @@ private:
     std::size_t count_;
 };
 
-cl::CommandQueue get_queue(int platform_index, int device_index)
+cl::Device get_device(int platform_index, int device_index)
 {
     std::vector<cl::Platform> platforms;
     std::vector<cl::Device> devices;
 
-    auto err = cl::Platform::get(&platforms);
-
-    err = platforms.at(platform_index).getDevices(TARGET_DEVICE_TYPE, &devices);
-    auto device = devices.at(device_index);
-
-    cl::Context context(device);
-
-    return cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE);
+    cl::Platform::get(&platforms);
+    platforms.at(platform_index).getDevices(TARGET_DEVICE_TYPE, &devices);
+    return devices.at(device_index);
 }
 
-cl::Context get_context(cl::CommandQueue& queue)
+cl::CommandQueue get_queue(cl::Device& device, cl::Context& context)
 {
-    cl::Context context;
-    queue.getInfo(CL_QUEUE_CONTEXT, &context);
-    return context;
+    return cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE);
 }
 
 constexpr const char* kernel_source = R"DCS(
@@ -142,18 +136,12 @@ kernel void fma(global const float* A, global const float* B, global const float
 }
 )DCS";
 
-constexpr const char* build_options = "-cl-std=CL1.2";
+constexpr const char* BUILD_OPTIONS = "-cl-std=CL1.2";
 
-cl::Kernel get_fma_kernel(cl::CommandQueue& queue)
+cl::Kernel get_fma_kernel(cl::Device& device, cl::Context& context, cl::CommandQueue& queue)
 {
-    cl::Context context;
-    cl::Device device;
-
-    queue.getInfo(CL_QUEUE_DEVICE, &device);
-    context = get_context(queue);
-
     cl::Program program(context, kernel_source);
-    program.build(device, build_options);
+    program.build(device, BUILD_OPTIONS);
 
     return cl::Kernel(program, "fma");
 }
@@ -167,7 +155,7 @@ namespace MyCl
 class Fma::Impl
 {
     public:
-        Impl(int platform_index, int device_index, std::size_t N = 0): data_count_(N), queue_(get_queue(platform_index, device_index)), kernel_(get_fma_kernel(queue_))
+        Impl(int platform_index, int device_index, std::size_t N = 0): data_count_(N), device_(get_device(platform_index, device_index)), context_(cl::Context(device_)), queue_(get_queue(device_, context_)), kernel_(get_fma_kernel(device_, context_, queue_))
         {
             if (N > 0) {
                 set_size(N);
@@ -177,11 +165,10 @@ class Fma::Impl
         {
             assert(N > 0);
             assert(N <= 64*1024*1024);
-            cl::Context context = get_context(queue_);
-            device_a_ = SvmArea(CoarseReadAllocator(context), N);
-            device_b_ = SvmArea(CoarseReadAllocator(context), N);
-            device_c_ = SvmArea(CoarseReadAllocator(context), N);
-            device_result_ = SvmArea(CoarseWriteAllocator(context), N);
+            device_a_ = SvmArea(CoarseReadAllocator(context_), N);
+            device_b_ = SvmArea(CoarseReadAllocator(context_), N);
+            device_c_ = SvmArea(CoarseReadAllocator(context_), N);
+            device_result_ = SvmArea(CoarseWriteAllocator(context_), N);
             data_count_ = N;
             global_work_size_ = cl::NDRange(std::ceil((float)N / (64*1024)), std::ceil((float)N / 64), (N > 64)? 64: N);
         }
@@ -205,6 +192,8 @@ class Fma::Impl
         }
     private:
         std::size_t data_count_;
+        cl::Device device_;
+        cl::Context context_;
         cl::CommandQueue queue_;
         cl::Kernel kernel_;
         cl::NDRange global_work_size_;
