@@ -1,10 +1,10 @@
-name: research
+name: ci
 on: push
 jobs:
   ci:
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -13,19 +13,17 @@ jobs:
       - name: Setup OpenCL environment(Ubuntu Only)
         if: startsWith(matrix.os, 'ubuntu')
         run: |
+            echo "::group::リポジトリ登録"
+            echo "::group::GPGキー登録"
+            wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+            echo "::group::sources.list登録"
+            echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list > /dev/null
             echo "::group::apt update"
             sudo apt-get update
             echo "::endgroup::"
-            echo "::group::poclインストール"
-            sudo apt-get install -y --no-install-recommends pocl-opencl-icd
+            echo "::group::Intel OneAPI OpenCLランタイムのインストール"
+            sudo apt-get install -y --no-install-recommends intel-oneapi-runtime-opencl
             echo "::endgroup::"
-      - name: Install CUDA
-        if: startsWith(matrix.os, 'windows')
-        uses: Jimver/cuda-toolkit@v0.2.29
-        id: cuda-toolkit
-        with:
-          cuda: '12.5.0'
-          method: 'network'  # https://github.com/Jimver/cuda-toolkit/issues/392#issuecomment-3311921753
       - name: Configure CMake
         run: |
             cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
@@ -34,4 +32,9 @@ jobs:
             cmake --build build --config Release
       - name: Do Test
         run: |
+            echo "::group::clinfo"
+            build/_deps/clinfo-build/clinfo
+            echo "::endgroup::"
+            echo "::group::テスト実行"
             ctest --test-dir build -C Release --output-on-failure
+            echo "::endgroup::"
